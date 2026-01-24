@@ -58,6 +58,8 @@ class DuckShell(Application):
         self.sock_lock = threading.Lock()
         self.closing_event = threading.Event()
         self.client_thread = threading.Thread(target=self.client, daemon=True)
+        self.connect_event = threading.Event()
+        self.disconnect_event = threading.Event()
 
         # Queue
         self.incoming = queue.Queue()
@@ -128,6 +130,48 @@ class DuckShell(Application):
                 self.shutdown("_exit command detected")
                 return
 
+            if cmd.startswith("_c "):
+                target = cmd[3:].strip()
+                try:
+                    host, port_str = target.split(":", 1)
+                    host = host.strip()
+                    port = int(port_str.strip())
+                    if not host:
+                        raise ValueError("empty host")
+                except Exception:
+                    self._err("Usage: _c host:port")
+                    return
+
+                # update target
+                self.host = host
+                self.port = port
+
+                # trigger connection
+                self.disconnect_event.clear()
+                self.connect_event.set()
+                self._log(f"Connecting to {self.host}:{self.port} ...")
+                return
+
+            # Disconnect: _d
+            if cmd == "_d":
+                self._log("Disconnecting...")
+                self.disconnect_event.set()
+                self.connect_event.clear()
+
+                with self.sock_lock:
+                    s = self.sock
+                if s:
+                    try:
+                        s.shutdown(socket.SHUT_RDWR)
+                    except Exception:
+                        pass
+                    try:
+                        s.close()
+                    except Exception:
+                        pass
+
+                return
+
             with self.sock_lock:
                 s = self.sock
 
@@ -169,8 +213,8 @@ class DuckShell(Application):
     def arguments_parser(self):
         parser = argparse.ArgumentParser()
 
-        parser.add_argument("-p", "--port", type=int, help="Port number", required=True)
-        parser.add_argument('-host', '--host', type=str, help="Hostname", required=True)
+        # parser.add_argument("-p", "--port", type=int, help="Port number", required=True)
+        # parser.add_argument('-host', '--host', type=str, help="Hostname", required=True)
 
         args = parser.parse_args()
 
@@ -236,7 +280,20 @@ class DuckShell(Application):
 
     def client(self):
         ptk_clear()
-        while True:
+
+
+        while not self.closing_event.is_set():
+            self._log("Type _c host:port to connect. (_d to disconnect)")
+            self.connect_event.wait()
+
+            if self.closing_event.is_set():
+                break
+
+            if not self.host or not self.port:
+                self._err("No host/port set. Usage: _c host:port")
+                self.connect_event.clear()
+                continue
+
             try:
                 self._log(f"Connecting to remote server...")
                 s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -280,6 +337,10 @@ class DuckShell(Application):
                         pass
                     self.sock = None
 
+                # reset flags
+                self.disconnect_event.clear()
+                self.connect_event.clear()
+
 
     def startup(self):
         self.arguments_parser()
@@ -287,6 +348,7 @@ class DuckShell(Application):
         asyncio.create_task(self.consume_incoming())
 
         self.client_thread.start()
+
 
 if __name__ == "__main__":
     app = DuckShell()
