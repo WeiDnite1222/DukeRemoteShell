@@ -535,6 +535,9 @@ class Server:
         with self._sub_lock:
             self._log_subscribers.discard(q)
 
+    def handler_command(self, command: str):
+        self.logger.info("Handling command: %s", command)
+
     def _build_tcp_server(self):
         manager = self
 
@@ -547,6 +550,12 @@ class Server:
                 self.manager = manager  # 直接嵌進 server instance
 
         class Handler(socketserver.BaseRequestHandler):
+            def setup(self):
+                mgr: Server = self.server.manager
+
+                mgr.logger.info(f"[SYS] Client from {self.client_address[0]}:{self.client_address[1]} connected,")
+
+
             def handle(self):
                 mgr: Server = self.server.manager
 
@@ -584,6 +593,8 @@ class Server:
                             if not cmd:
                                 continue
 
+                            mgr.logger.info(f"[SYS] Client from {self.client_address[0]}:{self.client_address[1]} send command: {cmd}")
+
                             if cmd.startswith("__"):
                                 if cmd == "__exit":
                                     self.request.sendall(b"[SYS] bye\n")
@@ -601,6 +612,8 @@ class Server:
 
                             msg = f"[OK] Command received. {cmd}\n" if ok else "[ERR] An error occurred\n"
                             self.request.sendall(msg.encode("utf-8"))
+                except ConnectionResetError:
+                    mgr.logger.info("[SYS] Client disconnected. From {}:{}".format(self.client_address[0], self.client_address[1]))
                 finally:
                     stop_evt.set()
                     mgr.unsubscribe_logs(log_q)

@@ -19,7 +19,7 @@ from prompt_toolkit.layout.controls import FormattedTextControl
 
 class DuckShell(Application):
     def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+        super().__init__(**kwargs, mouse_support=True)
 
         # Text style
         self.style = Style.from_dict({
@@ -43,7 +43,7 @@ class DuckShell(Application):
             content=self.log_control,
             style="class:log",
             wrap_lines=True,
-            right_margins = [ScrollbarMargin(display_arrows=True)]
+            always_hide_cursor=True
         )
         self.separator_area = TextArea(text="=" * 10 + " Enter Command Here " + "=" * 10, height=1)
         self.input_area = TextArea(height=1, prompt="> ", style="class:input", multiline=False)
