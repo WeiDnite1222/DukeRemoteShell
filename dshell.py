@@ -218,9 +218,6 @@ class DuckShell(Application):
 
         args = parser.parse_args()
 
-        self.host = args.host
-        self.port = args.port
-
         return args
 
     def shutdown(self, reason=""):
