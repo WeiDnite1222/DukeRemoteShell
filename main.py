@@ -329,6 +329,7 @@ class ServerObjectInConfig:
         host: str,
         port: int,
         future: dict[str, Any] | None = None,
+        enable: bool = True,
     ):
         self.name = name
         self.version = version
@@ -339,6 +340,7 @@ class ServerObjectInConfig:
         self.config = ServerConfig()
         self.host = host
         self.port = port
+        self.enable = enable
 
 
 @dataclass
@@ -699,7 +701,7 @@ def runserver(server_config_path):
     logger.addHandler(stdout_handler)
 
     server_list_config = load_all_server_cfg(server_config_path)
-    print("{} servers available".format(len(server_list_config.servers)))
+    logger.info("{} servers available".format(len(server_list_config.servers)))
     logger.info("Starting server")
 
     servers = []
@@ -715,7 +717,11 @@ def runserver(server_config_path):
 
         sv = Server(logger, server_cfg)
         servers.append(sv)
-        sv.start()
+
+        if sv.config.enable:
+            sv.start()
+        else:
+            logger.info(f"Server {server_cfg.name} is disabled.")
 
     while any(sv.is_process_alive() for sv in servers):
         time.sleep(1)
