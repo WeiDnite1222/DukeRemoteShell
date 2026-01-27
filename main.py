@@ -363,7 +363,7 @@ class ServerListConfig:
 @click.option("--x-memory-initial", "-xms", show_default=True,
               help="Initial allocation size of the memory for server",
               type=str, default="1G")
-@click.option("--x-memory-maximum", "--xmx", show_default=True,
+@click.option("--x-memory-maximum", "-xmx", show_default=True,
               help="Maximum allocation size of the memory for server",
               type=str, default="4G")
 @click.option("--nogui", "-ng",
@@ -371,7 +371,10 @@ class ServerListConfig:
               is_flag=True)
 @click.option("--extra-args", "-e",
               help="Extra java arguments", type=str, default="")
-def create_bootstrap(srv_config_path, server_folder_path, server_jar_path, socket_server_host, socket_server_port, java_exec_path, x_memory_initial, x_memory_maximum, nogui, extra_args):
+@click.option("--custom-commands", "-cd",
+              help="Custom run commands", type=str, default="")
+def create_bootstrap(srv_config_path, server_folder_path, server_jar_path, socket_server_host, socket_server_port,
+                     java_exec_path, x_memory_initial, x_memory_maximum, nogui, extra_args, custom_commands):
     global srv_obj
     srv_object = None
     if not os.path.exists(srv_config_path):
@@ -396,6 +399,10 @@ def create_bootstrap(srv_config_path, server_folder_path, server_jar_path, socke
 
     extra_args += " nogui" if nogui else ""
     cmd = f"{java_exec_path} -Xms{x_memory_initial} -Xmx{x_memory_maximum} -jar {server_jar_path} {extra_args}"
+    if custom_commands:
+        print("Will use custom commands as replacement.")
+        cmd = custom_commands
+
     print(f"Server command: {cmd}")
 
     server = ServerObjectInConfig(
