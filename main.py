@@ -614,6 +614,13 @@ class Server:
                                         f"[SYS] process_alive={alive}\n".encode("utf-8")
                                     )
                                     continue
+                                elif cmd == "__info":
+                                    self.request.sendall(
+                                        f"[SYS] Server name: {mgr.config.name}\n"
+                                        f"Broadcast at {mgr.config.host}:{mgr.config.port}\n"
+                                        f"Version: {mgr.config.version}\n"
+                                        f"Description: {mgr.config.description}\n".encode("utf-8")
+                                    )
                                 else:
                                     mgr.handler_command(cmd)
                             else:
