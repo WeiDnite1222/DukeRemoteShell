@@ -730,8 +730,14 @@ def runserver(server_config_path):
         else:
             logger.info(f"Server {server_cfg.name} is disabled.")
 
-    while any(sv.is_process_alive() for sv in servers):
-        time.sleep(1)
+    try:
+        while any(sv.is_process_alive() for sv in servers):
+            time.sleep(1)
+    except KeyboardInterrupt:
+        logger.info("Stopping server...")
+
+        for sv in servers:
+            sv.stop()
 
 if __name__ == "__main__":
     main()
